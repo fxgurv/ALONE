@@ -9,7 +9,6 @@ from termcolor import colored
 import asyncio
 import logging
 
-# Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -18,22 +17,84 @@ class TTS:
         self.openai_api_key = os.getenv('OPENAI_API_KEY')
         self.elevenlabs_api_key = os.getenv('ELEVENLABS_API_KEY')
         self.local_ai_url = os.getenv('LOCAL_AI_URL', 'https://imseldrith-tts-openai-free.hf.space/v1/audio/speech')
-        self.tts_voice = "alloy"  # Default voice
+        
+        # Voice collections
+        self.openai_voices = ["alloy", "echo", "fable", "onyx", "nova", "shimmer"]
+        
+        self.edge_voices = [
+            "en-US-ChristopherNeural", "en-US-EricNeural", "en-US-GuyNeural",
+            "en-US-JennyNeural", "en-US-AriaNeural", "en-US-DavisNeural",
+            "en-US-MonicaNeural", "en-US-SaraNeural", "en-US-AnaNeural",
+            "en-GB-LibbyNeural", "en-GB-MaisieNeural", "en-GB-RyanNeural",
+            "en-GB-SoniaNeural", "en-GB-ThomasNeural"
+        ]
+        
+        self.elevenlabs_voices = {
+            "Rachel": "21m00Tcm4TlvDq8ikWAM",
+            "Domi": "AZnzlk1XvdvUeBnXmlld",
+            "Bella": "EXAVITQu4vr4xnSDxMaL",
+            "Antoni": "ErXwobaYiN019PkySvjV",
+            "Elli": "MF3mGyEYCl7XYWbV9V6O",
+            "Josh": "TxGEqnHWrfWFTfGW9XjX",
+            "Arnold": "VR6AewLTigWG4xSOukaG",
+            "Adam": "pNInz6obpgDQGcFmaJgB",
+            "Sam": "yoZ06aMxZJJ28mfd3POQ"
+        }
+
+        self.google_langs = {
+            "English": "en", "Spanish": "es", "French": "fr",
+            "German": "de", "Italian": "it", "Portuguese": "pt",
+            "Russian": "ru", "Japanese": "ja", "Korean": "ko",
+            "Chinese": "zh-CN", "Hindi": "hi"
+        }
+
+    def select_voice(self, tts_type):
+        if tts_type == "openai":
+            print("\nAvailable OpenAI voices:")
+            for i, voice in enumerate(self.openai_voices, 1):
+                print(f"{i}. {voice}")
+            choice = int(input("\nSelect voice number: ")) - 1
+            return self.openai_voices[choice]
+            
+        elif tts_type == "edge":
+            print("\nAvailable Edge TTS voices:")
+            for i, voice in enumerate(self.edge_voices, 1):
+                print(f"{i}. {voice}")
+            choice = int(input("\nSelect voice number: ")) - 1
+            return self.edge_voices[choice]
+            
+        elif tts_type == "elevenlabs":
+            print("\nAvailable ElevenLabs voices:")
+            voices = list(self.elevenlabs_voices.keys())
+            for i, voice in enumerate(voices, 1):
+                print(f"{i}. {voice}")
+            choice = int(input("\nSelect voice number: ")) - 1
+            return voices[choice], self.elevenlabs_voices[voices[choice]]
+            
+        elif tts_type == "google":
+            print("\nAvailable languages:")
+            langs = list(self.google_langs.keys())
+            for i, lang in enumerate(langs, 1):
+                print(f"{i}. {lang}")
+            choice = int(input("\nSelect language number: ")) - 1
+            return self.google_langs[langs[choice]]
 
     def google_tts(self, text, output_file="google_tts_output.mp3"):
         from gtts import gTTS
-        tts = gTTS(text=text, lang='en', slow=False)
+        lang = self.select_voice("google")
+        tts = gTTS(text=text, lang=lang, slow=False)
         tts.save(output_file)
         return output_file
 
     async def edge_tts(self, text, output_file="edge_tts_output.mp3"):
         import edge_tts
-        communicate = edge_tts.Communicate(text, "en-US-ChristopherNeural")
+        voice = self.select_voice("edge")
+        communicate = edge_tts.Communicate(text, voice)
         await communicate.save(output_file)
         return output_file
 
     def openai_tts(self, text, output_file="openai_tts_output.mp3"):
-        import requests
+        voice = self.select_voice("openai")
         headers = {
             "Authorization": f"Bearer {self.openai_api_key}",
             "Content-Type": "application/json"
@@ -41,7 +102,7 @@ class TTS:
         data = {
             "model": "tts-1",
             "input": text,
-            "voice": "alloy"
+            "voice": voice
         }
         response = requests.post(
             "https://api.openai.com/v1/audio/speech",
@@ -55,7 +116,8 @@ class TTS:
         return None
 
     def local_ai_tts(self, text, output_file="local_ai_tts_output.mp3"):
-        logger.info("Synthesizing text using Local AI TTS")
+        logger.info("Synthesizing text using Local AI TTS (imseldrith)")
+        voice = self.select_voice("openai")  # Uses same voices as OpenAI
         headers = {
             "accept": "*/*",
             "Content-Type": "application/json"
@@ -63,13 +125,13 @@ class TTS:
         data = {
             "model": "tts-1",
             "input": text,
-            "voice": self.tts_voice,
+            "voice": voice,
             "response_format": "mp3",
             "speed": 1
         }
         try:
             response = requests.post(
-                f"{self.local_ai_url}/v1/audio/speech",
+                self.local_ai_url,
                 json=data,
                 headers=headers
             )
@@ -85,8 +147,8 @@ class TTS:
             return None
 
     def elevenlabs_tts(self, text, output_file="elevenlabs_tts_output.mp3"):
-        import requests
-        url = "https://api.elevenlabs.io/v1/text-to-speech/21m00Tcm4TlvDq8ikWAM"
+        voice_name, voice_id = self.select_voice("elevenlabs")
+        url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
         headers = {
             "Accept": "audio/mpeg",
             "Content-Type": "application/json",
@@ -140,14 +202,14 @@ class TTS:
 def main():
     tts = TTS()
     options = [
-        "Test Google TTS",
-        "Test Edge TTS",
-        "Test OpenAI TTS",
-        "Test Local AI TTS",
-        "Test Elevenlabs TTS",
-        "Test Coqui TTS",
-        "Test Mozilla TTS",
-        "Test Fairseq TTS",
+        "Google TTS (Multiple Languages)",
+        "Edge TTS (Multiple Voices)",
+        "OpenAI TTS (Multiple Voices)",
+        "Local AI TTS (imseldrith)",
+        "Elevenlabs TTS (Multiple Voices)",
+        "Coqui TTS",
+        "Mozilla TTS",
+        "Fairseq TTS",
         "Exit"
     ]
 
