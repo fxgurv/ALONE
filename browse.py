@@ -84,6 +84,21 @@ class Browser:
         return None
 
     def get_browser(self, name='chrome', headless=False, profile_path=None):
+        """
+        Initializes and returns a WebDriver instance for the specified browser.
+
+        Args:
+            name (str): Browser name ('chrome', 'firefox', 'safari', 'edge')
+            headless (bool): Whether to run browser in headless mode
+            profile_path (str): Path to browser profile directory
+
+        Returns:
+            WebDriver: Configured browser instance
+
+        Raises:
+            ValueError: If unsupported browser name is provided
+            Exception: If browser initialization fails
+        """
         logger.info(f"Initializing {name} browser (headless: {headless})")
         
         try:
@@ -93,7 +108,9 @@ class Browser:
                     options.add_argument('--headless')
                 if profile_path:
                     options.add_argument(f'user-data-dir={profile_path}')
-                self.driver = webdriver.Chrome(ChromeDriverManager().install(), options=options)
+                
+                service = ChromeService(ChromeDriverManager().install())
+                self.driver = webdriver.Chrome(service=service, options=options)
                 logger.info(f"Chrome browser initialized with profile: {profile_path}")
 
             elif name.lower() == 'firefox':
@@ -103,12 +120,13 @@ class Browser:
                 if profile_path:
                     options.add_argument('-profile')
                     options.add_argument(profile_path)
-                self.driver = webdriver.Firefox(executable_path=GeckoDriverManager().install(), options=options)
+                
+                service = FirefoxService(GeckoDriverManager().install())
+                self.driver = webdriver.Firefox(service=service, options=options)
                 logger.info(f"Firefox browser initialized with profile: {profile_path}")
 
             elif name.lower() == 'safari':
                 options = SafariOptions()
-                # Safari doesn't support profile paths in the same way
                 self.driver = webdriver.Safari(options=options)
                 logger.info("Safari browser initialized")
 
@@ -118,7 +136,9 @@ class Browser:
                     options.add_argument('--headless')
                 if profile_path:
                     options.add_argument(f'user-data-dir={profile_path}')
-                self.driver = webdriver.Edge(EdgeChromiumDriverManager().install(), options=options)
+                
+                service = EdgeService(EdgeChromiumDriverManager().install())
+                self.driver = webdriver.Edge(service=service, options=options)
                 logger.info(f"Edge browser initialized with profile: {profile_path}")
 
             else:
