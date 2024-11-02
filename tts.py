@@ -48,22 +48,22 @@ class TTS:
             "Chinese": "zh-CN", "Hindi": "hi"
         }
 
-    def select_voice(self, tts_type):
-        if tts_type == "openai":
+    def select_voice(self, tts_engine):
+        if tts_engine == "openai":
             print("\nAvailable OpenAI voices:")
             for i, voice in enumerate(self.openai_voices, 1):
                 print(f"{i}. {voice}")
             choice = int(input("\nSelect voice number: ")) - 1
             return self.openai_voices[choice]
             
-        elif tts_type == "edge":
+        elif tts_engine == "edge":
             print("\nAvailable Edge TTS voices:")
             for i, voice in enumerate(self.edge_voices, 1):
                 print(f"{i}. {voice}")
             choice = int(input("\nSelect voice number: ")) - 1
             return self.edge_voices[choice]
             
-        elif tts_type == "elevenlabs":
+        elif tts_engine == "elevenlabs":
             print("\nAvailable ElevenLabs voices:")
             voices = list(self.elevenlabs_voices.keys())
             for i, voice in enumerate(voices, 1):
@@ -71,7 +71,7 @@ class TTS:
             choice = int(input("\nSelect voice number: ")) - 1
             return voices[choice], self.elevenlabs_voices[voices[choice]]
             
-        elif tts_type == "google":
+        elif tts_engine == "google":
             print("\nAvailable languages:")
             langs = list(self.google_langs.keys())
             for i, lang in enumerate(langs, 1):
